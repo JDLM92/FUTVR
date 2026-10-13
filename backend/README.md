@@ -113,12 +113,15 @@ Detection `imagePoint` and `box` coordinates are normalized `0..1`; boxes are
    create `futvr-production` with `FUTVR_ENV=production`,
    `FUTVR_JOB_BACKEND=modal`, `RFDETR_ENABLED=1`, `SUPABASE_URL`,
    `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
-   `SUPABASE_STORAGE_BUCKET=futvr-private`, `FUTVR_PUBLIC_API_URL` (HTTPS),
-   and `FUTVR_CORS_ORIGINS` (the exact Vercel frontend origin). Keep server keys
+   `SUPABASE_STORAGE_BUCKET=futvr-private`,
+   and `FUTVR_CORS_ORIGINS` (empty until the exact Vercel frontend origin is known). Keep server keys
    out of browser environment variables and client bundles.
    The preferred `sb_publishable_`/`sb_secret_` keys are sent only in Supabase's
    `apikey` header; they are not treated as JWTs. The old `SUPABASE_ANON_KEY` and
    `SUPABASE_SERVICE_ROLE_KEY` names remain supported for existing projects.
+   Omit `FUTVR_PUBLIC_API_URL`: production defaults it to empty and signs source
+   links through Supabase, so the initial Modal deployment does not need its own
+   future URL. Explicit nonempty values must use HTTPS; do not copy the local HTTP value.
 4. Install the optional deployment SDK and run from `backend/`:
 
    ```sh
@@ -129,6 +132,8 @@ Detection `imagePoint` and `box` coordinates are normalized `0..1`; boxes are
 5. Set the frontend's `VITE_API_URL` to the actual Modal ASGI URL returned
    by deployment with `/api` appended, verify `/api/health`, and test anonymous upload → email claim
    → save → private-source publication → comment → delete on the chosen project.
+   Set `FUTVR_CORS_ORIGINS` to the actual frontend HTTPS origin in Modal and
+   redeploy before browser verification; add preview origins explicitly when needed.
 
 The Modal adapter exposes a CPU ASGI API and uses durable `spawn` calls to a
 separate GPU worker. Results live in Supabase, so browser navigation does not

@@ -7,7 +7,7 @@ import os
 class Settings:
     environment: str = "development"
     data_dir: Path = Path(".futvr-data")
-    public_api_url: str = "http://localhost:8000"
+    public_api_url: str = ""
     origins: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
     supabase_url: str = ""
     supabase_publishable_key: str = ""
@@ -53,17 +53,18 @@ class Settings:
             raise RuntimeError("Production requires Supabase URL, publishable key, and server secret key (legacy aliases also supported); SQLite fallback is disabled")
         if not self.local and not self.supabase_url.startswith("https://"):
             raise RuntimeError("Production SUPABASE_URL must use HTTPS")
-        if not self.local and not self.public_api_url.startswith("https://"):
+        if not self.local and self.public_api_url and not self.public_api_url.startswith("https://"):
             raise RuntimeError("Production FUTVR_PUBLIC_API_URL must use HTTPS")
         if self.job_backend not in {"local", "modal"}:
             raise RuntimeError("FUTVR_JOB_BACKEND must be local or modal")
 
     @classmethod
     def from_env(cls) -> "Settings":
+        environment = os.getenv("FUTVR_ENV", "development")
         settings = cls(
-            environment=os.getenv("FUTVR_ENV", "development"),
+            environment=environment,
             data_dir=Path(os.getenv("FUTVR_DATA_DIR", ".futvr-data")),
-            public_api_url=os.getenv("FUTVR_PUBLIC_API_URL", "http://localhost:8000").rstrip("/"),
+            public_api_url=os.getenv("FUTVR_PUBLIC_API_URL", "" if environment == "production" else "http://localhost:8000").strip().rstrip("/"),
             origins=tuple(x.strip() for x in os.getenv("FUTVR_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()),
             supabase_url=os.getenv("SUPABASE_URL", "").rstrip("/"),
             supabase_publishable_key=os.getenv("SUPABASE_PUBLISHABLE_KEY", ""),

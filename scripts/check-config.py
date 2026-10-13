@@ -11,7 +11,7 @@ except ImportError:
 
 keys = [
     "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY",
-    "FUTVR_PUBLIC_API_URL", "FUTVR_CORS_ORIGINS", "VITE_API_URL",
+    "FUTVR_CORS_ORIGINS", "VITE_API_URL",
 ]
 present = {key: bool(os.getenv(key, "").strip()) for key in keys}
 present["SUPABASE_PUBLISHABLE_KEY"] |= bool(os.getenv("SUPABASE_ANON_KEY", "").strip())

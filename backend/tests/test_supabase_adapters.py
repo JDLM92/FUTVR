@@ -12,6 +12,23 @@ def production():
     return Settings(environment="production", public_api_url="https://api.example.com", supabase_url="https://example.supabase.co", supabase_anon_key="public-test-key", supabase_service_key="server-test-key")
 
 
+def test_production_bootstraps_without_an_api_url_but_rejects_explicit_http(monkeypatch):
+    monkeypatch.setenv("FUTVR_ENV", "production")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    monkeypatch.setenv("SUPABASE_SECRET_KEY", "sb_secret_test")
+    monkeypatch.delenv("FUTVR_PUBLIC_API_URL", raising=False)
+    assert Settings.from_env().public_api_url == ""
+    monkeypatch.setenv("FUTVR_PUBLIC_API_URL", "https://api.example.com/")
+    assert Settings.from_env().public_api_url == "https://api.example.com"
+    monkeypatch.setenv("FUTVR_PUBLIC_API_URL", "http://localhost:8000")
+    with pytest.raises(RuntimeError, match="FUTVR_PUBLIC_API_URL must use HTTPS"):
+        Settings.from_env()
+    monkeypatch.setenv("FUTVR_ENV", "development")
+    monkeypatch.delenv("FUTVR_PUBLIC_API_URL", raising=False)
+    assert Settings.from_env().public_api_url == "http://localhost:8000"
+
+
 def test_modern_api_keys_are_never_sent_as_bearer_jwts():
     settings = Settings(environment="production", public_api_url="https://api.example.com", supabase_url="https://example.supabase.co", supabase_publishable_key="sb_publishable_test", supabase_secret_key="sb_secret_test")
     settings.validate()
