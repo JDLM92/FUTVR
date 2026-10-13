@@ -20,13 +20,16 @@ def cache_official_weights():
 base = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install("fastapi>=0.115,<1", "uvicorn>=0.32,<1", "pydantic>=2.9,<3", "python-multipart>=0.0.18", "Pillow>=11,<13", "httpx>=0.28,<1", "numpy>=2,<3")
-    .add_local_python_source("futvr")
 )
+# Modal requires build steps before mounted local sources. Keep the shared build
+# image free of mounts and attach editable source last on each final image.
+cpu_image = base.add_local_python_source("futvr")
 gpu_image = (
     base.apt_install("libgl1", "libglib2.0-0")
     .pip_install("rfdetr==1.11.2")
     .env({"RF_HOME": "/opt/futvr-models", "RFDETR_WEIGHTS_PATH": "/opt/futvr-models/rf-detr-large-2026.pth"})
     .run_function(cache_official_weights)
+    .add_local_python_source("futvr")
 )
 secret = modal.Secret.from_name("futvr-production")
 
@@ -50,7 +53,7 @@ def analyse_job(job_id: str):
         storage.client.close()
 
 
-@app.function(image=base, secrets=[secret], timeout=120, max_containers=1, scaledown_window=300)
+@app.function(image=cpu_image, secrets=[secret], timeout=120, max_containers=1, scaledown_window=300)
 @modal.concurrent(max_inputs=30)
 @modal.asgi_app()
 def api():
