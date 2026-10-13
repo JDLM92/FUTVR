@@ -70,6 +70,7 @@ import {
 import { api, ApiError } from "./lib/api";
 import type { Session } from "./lib/api";
 import { loadLocalDraft, readSession, saveLocalDraft } from "./lib/drafts";
+import { encodeCropTransport } from "./lib/imageTransport";
 import { BoardEditor } from "./components/BoardEditor";
 const Scene3D = lazy(() => import("./components/Scene3D"));
 import SourceReview from "./components/SourceReview";
@@ -175,17 +176,8 @@ async function cropImage(
     canvas.width,
     canvas.height,
   );
-  const blob = await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("Image processing failed."))),
-      "image/png",
-    ),
-  );
   return {
-    file: new File([blob], "match-frame.png", { type: "image/png" }),
-    url: canvas.toDataURL("image/png"),
-    width: canvas.width,
-    height: canvas.height,
+    ...(await encodeCropTransport(canvas)),
     crop,
   };
 }

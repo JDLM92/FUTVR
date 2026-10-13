@@ -41,7 +41,7 @@ You can also run `.venv/bin/python scripts/check-config.py` locally. It reports 
 
 ## Supabase project preparation
 
-Use a dedicated beta project. In its SQL editor, apply `supabase/migrations/202610130001_futvr_private.sql`. It creates FutVR's tables, service-only RPCs, row-level security, and a private image bucket. Enable Anonymous Sign-ins, configure email Auth/SMTP, and change the email template to display `{{ .Token }}` for six-digit-code entry.
+Use a dedicated beta project. In its SQL editor, apply `supabase/migrations/202610130001_futvr_private.sql`. It creates FutVR's tables, service-only RPCs, row-level security, and a private image bucket. Enable Anonymous Sign-ins, configure email Auth/SMTP, and change the email template to display `{{ .Token }}` for numeric-code entry. The form accepts Supabase's supported 6–10-digit codes; the template displays the configured code without setting its length.
 
 Applying this SQL requires a signed-in project SQL editor. The application's secret API key alone does not run raw migrations through its REST adapter. No additional credential is needed in this chat when you apply it manually. Automated SQL would require separate Management API authorization. [Supabase SQL API](https://supabase.com/docs/reference/api/v1-run-a-query)
 

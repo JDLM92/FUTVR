@@ -1,6 +1,62 @@
 import { expect, test } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import { devLogin, openSample, pitchPoint, tapPitch } from './helpers';
 import { emptyPitchPng } from './pitch-fixture';
+
+test('dense JPEG crops stay within the API limit with matching upload and preview formats', async ({ page }) => {
+  test.setTimeout(90_000);
+  let uploaded: { size: number; type: string; name: string; hash: string } | undefined;
+  await page.route('**/auth/guest', route => route.fulfill({
+    json: { accessToken: 'transport-test', user: { id: 'transport-test', email: null, isAnonymous: true } },
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  }));
+  await page.route('**/analyses', async route => {
+    const form = await new Response(route.request().postDataBuffer(), {
+      headers: { 'Content-Type': route.request().headers()['content-type'] },
+    }).formData();
+    const file = form.get('file') as File;
+    uploaded = { size: file.size, type: file.type, name: file.name, hash: createHash('sha256').update(Buffer.from(await file.arrayBuffer())).digest('hex') };
+    await route.fulfill({ status: 202, json: {
+      id: 'transport-test', status: 'completed', result: { detections: [], calibration: { status: 'unavailable' } },
+    }, headers: { 'Access-Control-Allow-Origin': '*' } });
+  });
+  await page.goto('/');
+  // A reproducible, high-detail fixture demonstrates JPEG-to-PNG expansion in
+  // the actual browser encoder; this does not call the detector or cloud API.
+  const input = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 2560;
+    const context = canvas.getContext('2d')!;
+    const pixels = context.createImageData(canvas.width, canvas.height);
+    let seed = 42;
+    const byte = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed & 255; };
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      pixels.data[i] = byte(); pixels.data[i + 1] = byte(); pixels.data[i + 2] = byte(); pixels.data[i + 3] = 255;
+    }
+    context.putImageData(pixels, 0, 0);
+    const jpeg = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/jpeg', .85));
+    const decoded = await createImageBitmap(jpeg);
+    context.drawImage(decoded, 0, 0); decoded.close();
+    const expanded = await new Promise<Blob>(resolve => canvas.toBlob(blob => resolve(blob!), 'image/png'));
+    const dataURL = await new Promise<string>(resolve => {
+      const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsDataURL(jpeg);
+    });
+    return { bytes: jpeg.size, expandedBytes: expanded.size, base64: dataURL.split(',')[1] };
+  });
+  expect(input.bytes).toBeLessThan(20 * 1024 * 1024);
+  expect(input.expandedBytes).toBeGreaterThan(10 * 1024 * 1024);
+  await page.getByLabel('Upload match screenshot').setInputFiles({ name: 'dense-frame.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(input.base64, 'base64') });
+  await page.getByRole('button', { name: 'Full image', exact: true }).click();
+  await page.getByRole('button', { name: 'Create tactical board' }).click();
+  await expect(page.getByRole('heading', { name: 'Does the pitch line up?' })).toBeVisible();
+  expect(uploaded?.size).toBeLessThanOrEqual(10 * 1024 * 1024);
+  expect(uploaded?.type).toBe('image/jpeg');
+  expect(uploaded?.name).toBe('match-frame.jpg');
+  const preview = await page.locator('.source-canvas image').getAttribute('href');
+  expect(preview?.startsWith('data:image/jpeg;base64,')).toBe(true);
+  const previewHash = createHash('sha256').update(Buffer.from(preview!.split(',')[1], 'base64')).digest('hex');
+  expect(previewHash).toBe(uploaded?.hash);
+});
 
 async function actorX(page: Parameters<typeof openSample>[0], id: string) {
   return Number((await page.locator(`[data-actor="${id}"]`).getAttribute('transform'))?.match(/translate\(([^ ]+)/)?.[1]);

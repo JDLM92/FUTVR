@@ -90,12 +90,12 @@ export default function AuthDialog({ session, onClose, onSuccess }: Props) {
               id="auth-code"
               inputMode="numeric"
               autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={6}
+              pattern="[0-9]{6,10}"
+              maxLength={10}
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="6-digit code"
+              placeholder="Code from your email"
             />
             {devCode ? (
               <div className="dev-notice">
@@ -104,7 +104,7 @@ export default function AuthDialog({ session, onClose, onSuccess }: Props) {
                 Your test code is <strong>{devCode}</strong>.
               </div>
             ) : (
-              <p className="small">Check your email for a six-digit code.</p>
+              <p className="small">Enter the code from your email.</p>
             )}
           </>
         )}
