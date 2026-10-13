@@ -1,0 +1,14 @@
+.env
+.env.*
+.venv
+.futvr-data
+backend
+supabase
+e2e
+test-results
+playwright-report
+node_modules
+*.pdf
+*.zip
+*.pth
+*.pt

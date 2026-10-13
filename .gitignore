@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+__pycache__/
+.pytest_cache/
+.venv/
+*.sqlite3
+.futvr-data/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.egg-info/
+*.pth
+*.pt
